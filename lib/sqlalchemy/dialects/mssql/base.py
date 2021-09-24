@@ -2816,24 +2816,11 @@ class MSDialect(default.DefaultDialect):
     def has_table(self, connection, tablename, dbname, owner, schema):
         self._ensure_has_table_connection(connection)
         if tablename.startswith("#"):  # temporary table
-            tables = ischema.mssql_temp_table_columns
-
-            s = sql.select(tables.c.table_name).where(
-                tables.c.table_name.like(
-                    self._temp_table_name_like_pattern(tablename)
-                )
-            )
-
-            table_name = connection.execute(s.limit(1)).scalar()
-            if table_name:
-                # #6910: verify it's not a temp table from another session
-                obj_id = connection.execute(
-                    text("SELECT object_id(:table_name)"),
-                    {"table_name": "tempdb.dbo.[{}]".format(table_name)},
-                ).scalar()
-                return bool(obj_id)
-            else:
-                return False
+            obj_id = connection.execute(
+                text("SELECT object_id(:table_name)"),
+                {"table_name": "tempdb.dbo.[{}]".format(tablename)},
+            ).scalar()
+            return bool(obj_id)
         else:
             tables = ischema.tables
 
